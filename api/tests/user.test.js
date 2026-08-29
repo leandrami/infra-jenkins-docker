@@ -1,15 +1,15 @@
 const request = require('supertest');
-const app = require('../src/app');
-const pool = require('../src/config/db');
+const app = require('../../src/app');
+const pool = require('../../src/config/db');
 
-// Mock the pg pool
-jest.mock('../src/config/db', () => {
+// Mock the mysql2 pool
+jest.mock('../../src/config/db', () => {
   return {
     query: jest.fn(),
   };
 });
 
-describe('User API CRUD tests with PostgreSQL', () => {
+describe('User API CRUD tests with MySQL', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -17,7 +17,7 @@ describe('User API CRUD tests with PostgreSQL', () => {
   describe('GET /users', () => {
     it('should return all users', async () => {
       const mockUsers = [{ id: 1, name: 'John Doe', email: 'john@example.com' }];
-      pool.query.mockResolvedValue({ rows: mockUsers });
+      pool.query.mockResolvedValue([mockUsers]);
 
       const response = await request(app).get('/users');
       expect(response.status).toBe(200);
@@ -37,16 +37,16 @@ describe('User API CRUD tests with PostgreSQL', () => {
   describe('GET /users/:id', () => {
     it('should return user by id', async () => {
       const mockUser = { id: 1, name: 'John Doe', email: 'john@example.com' };
-      pool.query.mockResolvedValue({ rows: [mockUser] });
+      pool.query.mockResolvedValue([[mockUser]]);
 
       const response = await request(app).get('/users/1');
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockUser);
-      expect(pool.query).toHaveBeenCalledWith('SELECT * FROM users WHERE id = $1', ['1']);
+      expect(pool.query).toHaveBeenCalledWith('SELECT * FROM users WHERE id = ?', ['1']);
     });
 
     it('should return 404 if user not found', async () => {
-      pool.query.mockResolvedValue({ rows: [] });
+      pool.query.mockResolvedValue([[]]);
 
       const response = await request(app).get('/users/999');
       expect(response.status).toBe(404);
@@ -56,16 +56,18 @@ describe('User API CRUD tests with PostgreSQL', () => {
 
   describe('POST /users', () => {
     it('should create a new user', async () => {
-      const mockUser = { id: 1, name: 'Jane Doe', email: 'jane@example.com' };
-      pool.query.mockResolvedValue({ rows: [mockUser] });
+      pool.query.mockResolvedValue([{ insertId: 1 }]);
 
       const response = await request(app)
         .post('/users')
         .send({ name: 'Jane Doe', email: 'jane@example.com' });
-      
+
       expect(response.status).toBe(201);
-      expect(response.body).toEqual(mockUser);
-      expect(pool.query).toHaveBeenCalledWith('INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email', ['Jane Doe', 'jane@example.com']);
+      expect(response.body).toEqual({ id: 1, name: 'Jane Doe', email: 'jane@example.com' });
+      expect(pool.query).toHaveBeenCalledWith(
+        'INSERT INTO users (name, email) VALUES (?, ?)',
+        ['Jane Doe', 'jane@example.com']
+      );
     });
 
     it('should return 400 if validation fails', async () => {
@@ -77,41 +79,43 @@ describe('User API CRUD tests with PostgreSQL', () => {
 
   describe('PUT /users/:id', () => {
     it('should update an existing user', async () => {
-      const mockUser = { id: 1, name: 'John Updated', email: 'john@updated.com' };
-      pool.query.mockResolvedValue({ rowCount: 1, rows: [mockUser] });
+      pool.query.mockResolvedValue([{ affectedRows: 1 }]);
 
       const response = await request(app)
         .put('/users/1')
         .send({ name: 'John Updated', email: 'john@updated.com' });
-      
+
       expect(response.status).toBe(200);
-      expect(response.body).toEqual(mockUser);
-      expect(pool.query).toHaveBeenCalledWith('UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id, name, email', ['John Updated', 'john@updated.com', '1']);
+      expect(response.body).toEqual({ id: '1', name: 'John Updated', email: 'john@updated.com' });
+      expect(pool.query).toHaveBeenCalledWith(
+        'UPDATE users SET name = ?, email = ? WHERE id = ?',
+        ['John Updated', 'john@updated.com', '1']
+      );
     });
 
     it('should return 404 if user to update is not found', async () => {
-      pool.query.mockResolvedValue({ rowCount: 0, rows: [] });
+      pool.query.mockResolvedValue([{ affectedRows: 0 }]);
 
       const response = await request(app)
         .put('/users/999')
         .send({ name: 'John Updated', email: 'john@updated.com' });
-      
+
       expect(response.status).toBe(404);
     });
   });
 
   describe('DELETE /users/:id', () => {
     it('should delete a user', async () => {
-      pool.query.mockResolvedValue({ rowCount: 1 });
+      pool.query.mockResolvedValue([{ affectedRows: 1 }]);
 
       const response = await request(app).delete('/users/1');
       expect(response.status).toBe(200);
       expect(response.body).toEqual({ message: 'User deleted successfully' });
-      expect(pool.query).toHaveBeenCalledWith('DELETE FROM users WHERE id = $1', ['1']);
+      expect(pool.query).toHaveBeenCalledWith('DELETE FROM users WHERE id = ?', ['1']);
     });
 
     it('should return 404 if user to delete is not found', async () => {
-      pool.query.mockResolvedValue({ rowCount: 0 });
+      pool.query.mockResolvedValue([{ affectedRows: 0 }]);
 
       const response = await request(app).delete('/users/999');
       expect(response.status).toBe(404);
