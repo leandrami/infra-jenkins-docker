@@ -1,0 +1,41 @@
+# Dependências
+node_modules/
+jspm_packages/
+
+# Variáveis de ambiente e segredos
+.env
+
+# Build e arquivos gerados
+dist/
+build/
+*.tsbuildinfo
+
+# Logs e arquivos de sistema
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.DS_Store
+
+# Cobertura de testes e relatórios
+coverage/
+.nyc_output/
+
+# Editor e IDE
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Windows (você está usando PowerShell/Windows)
+Thumbs.db
+
+# Variações de .env
+.env.local
+.env.*.local
+
+# Logs genéricos (não só npm/yarn/pnpm)
+*.log
