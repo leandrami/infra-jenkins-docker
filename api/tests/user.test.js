@@ -3,7 +3,7 @@ const app = require('../src/app');
 const pool = require('../src/config/db');
 
 // Mock the pg pool
-jest.mock('../src/config/db', () => {
+jest.mock('../../src/config/db', () => {
   return {
     query: jest.fn(),
   };
